@@ -2,7 +2,7 @@
   "name": "unity-codesnippets",
   "displayName": "Easy Unity Snippets",
   "description": "Improved Unity Code Autocomplete extension.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "Maldron",
   "repository": {
 		"type": "git",
