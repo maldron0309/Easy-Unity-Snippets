@@ -1,26 +1,60 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
+import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
+import { DEST_PATH, EXT_ID, ISSUES_URL, Options, Replaces, TEMPLATES, TEMPLATES_BASEPATH } from './model';
+import { parseOptions } from './options';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+const TAG_REGEX = /\%(\w+)\%/gm;
+
 export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "unity-code-snippets" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('unity-code-snippets.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Unity Code Snippets!');
-	});
-
+	const disposable = vscode.workspace.onDidChangeConfiguration(e => onConfigurationChanged(context, e));
 	context.subscriptions.push(disposable);
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+function onConfigurationChanged(context: vscode.ExtensionContext, e: vscode.ConfigurationChangeEvent) {
+	if (!e.affectsConfiguration(EXT_ID)) { return; }
+	const conf = vscode.workspace.getConfiguration(EXT_ID);
+
+	createSnippets(context, parseOptions(conf))
+		.then(content => saveSnippets(context, content))
+		.then(() => {
+			vscode.window.showInformationMessage('Restart VSCode to apply the snippets', 'Restart')
+				.then(result => { if (result === 'Restart') { vscode.commands.executeCommand('workbench.action.reloadWindow'); } });
+		})
+		.catch(showError);
+}
+
+async function createSnippets(context: vscode.ExtensionContext, options: Options) {
+	const contents: string[] = await Promise.all(
+		TEMPLATES
+			.map(file =>
+				options.autoComplete[file]
+					? replaceOnTemplate(context.asAbsolutePath(`${TEMPLATES_BASEPATH}/${file}.json`), options.replaces)
+					: null)
+			.filter(e => e) as Promise<string>[]
+	);
+
+	let result = {};
+	contents.forEach(content => result = Object.assign(result, JSON.parse(content)));
+	return JSON.stringify(result, null, '\t');
+}
+
+async function replaceOnTemplate(filePath: string, replaces: Replaces) {
+	const content = await fs.readFile(filePath, { encoding: 'utf-8' });
+	return content.replace(TAG_REGEX, (_match: string, p1: string) => replaces[p1 as keyof Replaces] ?? p1);
+}
+
+async function saveSnippets(context: vscode.ExtensionContext, content: string) {
+	const dest = context.asAbsolutePath(DEST_PATH);
+	return fs.writeFile(dest, content, { encoding: 'utf-8' });
+}
+
+function showError(e: any) {
+	console.error(e);
+	vscode.window.showErrorMessage(`Oh, no! An error has happened!\nPlease try to reinstall the extension and if this does not solve the issue, please report it on github: ${e.toString()}`, 'Open Extension', 'Report')
+		.then(res => {
+			if (res === 'Open Extension') { vscode.commands.executeCommand('extension.open', `kleber-swf.${EXT_ID}`); }
+			else if (res === 'Report') { vscode.env.openExternal(vscode.Uri.parse(ISSUES_URL)); }
+		});
+}
+
+export function deactivate() { }
