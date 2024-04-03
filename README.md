@@ -10,7 +10,6 @@ Unity makes it easy to create classes and methods
 
 > **0.0.3**: Unity Classes, Methods Autocomplete
 
-
 ## snippets
 
 -  Classes:
