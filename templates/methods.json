@@ -1,11 +1,13 @@
 {
 	"MonoBehaviour Awake": {
 		"prefix": "Awake",
+		"description": "Awake is called when the script instance is being loaded.",
 		"body": ["%PRIVATE%void Awake()%LINE_BREAK%{", "\t$0", "}"]
 	},
 
 	"MonoBehaviour FixedUpdate": {
 		"prefix": "FixedUpdate",
+		"description": "This function is called every fixed framerate frame, if the MonoBehaviour is enabled.",
 		"body": ["%PRIVATE%void FixedUpdate()%LINE_BREAK%{", "\t$0", "}"]
 	},
 
